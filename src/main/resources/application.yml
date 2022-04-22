@@ -1,0 +1,22 @@
+server:
+  port: 9988
+spring:
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+      routes:
+        - id: after_route
+          uri: http://www.quan.shop:8050
+          predicates:
+            - After=2020-01-20T17:42:47.789-07:00[America/Denver]
+
+
+#logging:
+#  level:
+#    com: debug
+#    org: debug
+#    ch: debug
+#    shop: debug
+#    io: debug
