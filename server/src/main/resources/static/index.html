@@ -1,0 +1,60 @@
+<html>
+
+    <head>
+        <meta charset="UTF-8">
+    </head>
+
+    <body>
+        <h2>Welcome To HuanTing</h2><br>
+        <div id="pathAppendDiv" style="width: 1200px; height: 800px; overflow-y: scroll;">
+
+        </div>
+    </body>
+
+    <script>
+
+        var socket;
+
+        if(typeof(WebSocket) == "undefined") {
+            console.log("您的浏览器不支持WebSocket");
+        } else {
+            console.log("您的浏览器支持WebSocket");
+            //实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
+            socket = new WebSocket("ws://" + window.location.host + "/websocket/20");
+            //打开事件
+            socket.onopen = function() {
+                addContent("连接服务器成功", "");
+                // socket.send("这是来自客户端的消息" + location.href + new Date());
+            };
+            //获得消息事件
+            socket.onmessage = function(msg) {
+
+                console.log(msg.data)
+                let data = JSON.parse(msg.data);
+                addContent(data.method, data.path);
+
+                //发现消息进入    开始处理前端触发逻辑
+            };
+            //关闭事件
+            socket.onclose = function() {
+                console.log("Socket已关闭");
+            };
+            //发生了错误事件
+            socket.onerror = function() {
+                alert("Socket发生了错误");
+                //此时可以尝试刷新页面
+            }
+            //离开页面时，关闭socket
+            //jquery1.8中已经被废弃，3.0中已经移除
+            // $(window).unload(function(){
+            //     socket.close();
+            //});
+        }
+
+        function addContent(method, path) {
+            let h2 = document.createElement("h3");
+            h2.innerText = method + " " + path;
+            document.getElementById("pathAppendDiv").appendChild(h2);
+        }
+    </script>
+</html>

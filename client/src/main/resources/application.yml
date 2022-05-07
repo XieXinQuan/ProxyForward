@@ -1,0 +1,20 @@
+server:
+  port: 9988
+#spring:
+#  cloud:
+#    gateway:
+#      routes:
+#        - id: after_route
+#          uri: http://192.168.10.228:8092
+#          predicates:
+#            - After=2020-01-20T17:42:47.789-07:00[America/Denver]
+
+
+
+#logging:
+#  level:
+#    com: debug
+#    org: debug
+#    ch: debug
+#    shop: debug
+#    io: debug
