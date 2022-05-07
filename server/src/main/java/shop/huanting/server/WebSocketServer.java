@@ -8,6 +8,7 @@ import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
+import java.util.List;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
@@ -74,16 +75,18 @@ public class WebSocketServer {
         try {
             cacheTxt.append(txt);
             // 一次发送完毕！！！
-            String value = cacheTxt.toString();
+            String value = "[" + cacheTxt.toString() + "]";
             log.info("开始格式化数据：" + value);
-            SendData sendData = JSON.parseObject(value, SendData.class);
+            List<SendData> sendDataList = JSON.parseArray(value, SendData.class);
             log.info("格式化成功");
 
-            if ("ping".equals(sendData.getType())) {
+            for (SendData sendData : sendDataList) {
+                if ("ping".equals(sendData.getType())) {
 
-            }else if ("request".equals(sendData.getType())) {
-                for (WebSocketServer socketServer : webSocketSet) {
-                    socketServer.sendMessage(sendData.getMethod(), sendData.getPath());
+                } else if ("request".equals(sendData.getType())) {
+                    for (WebSocketServer socketServer : webSocketSet) {
+                        socketServer.sendMessage(sendData.getMethod(), sendData.getPath());
+                    }
                 }
             }
 
@@ -93,7 +96,7 @@ public class WebSocketServer {
         }catch (Exception e) {
             // 存在拆包情况，与 下一次结合
 //            cacheTxt.append(txt);
-            log.error("格式化json错误", e);
+            log.error("格式化json错误, 等待下一次解析");
             // 重置
 //            cacheTxt = new StringBuilder();
         }
