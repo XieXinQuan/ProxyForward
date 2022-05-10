@@ -54,6 +54,11 @@
         function addContent(method, path) {
             let h2 = document.createElement("h3");
             h2.innerText = method + " " + path;
+            h2.setAttribute("custom-path", path)
+            h2.addEventListener("click", ev => {
+                console.log(ev)
+                console.log(ev)
+            })
             document.getElementById("pathAppendDiv").appendChild(h2);
         }
     </script>

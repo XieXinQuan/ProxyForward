@@ -1,7 +1,11 @@
 package shop.huanting.controller;
 
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RestController;
+import entry.ModifyInfo;
+import org.springframework.web.bind.annotation.*;
+import shop.huanting.server.ClientReceive;
+import shop.huanting.server.WebSocketServer;
+
+import javax.annotation.Resource;
 
 /**
  * @author xie.xinquan
@@ -11,8 +15,27 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class WebController {
 
+    @Resource
+    private ClientReceive clientReceive;
+
     @GetMapping("/")
     public String welcome() {
         return "Hello World！！！";
+    }
+
+    @PostMapping("/addRule")
+    public String addRule(@RequestBody ModifyInfo modifyInfo) {
+        modifyInfo.setType("addRule");
+        clientReceive.sendMsg(modifyInfo);
+        return "Success";
+    }
+
+    @PostMapping("/removeRule")
+    public String removeRule(@RequestParam("path") String path) {
+        ModifyInfo modifyInfo = new ModifyInfo();
+        modifyInfo.setType("removeRule");
+        modifyInfo.setTargetPath(path);
+        clientReceive.sendMsg(modifyInfo);
+        return "Success";
     }
 }

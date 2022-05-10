@@ -11,6 +11,7 @@
     <modules>
         <module>server</module>
         <module>client</module>
+        <module>common</module>
     </modules>
     <properties>
         <maven.compiler.source>8</maven.compiler.source>
@@ -19,6 +20,17 @@
 
     <dependencies>
 
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.10</version>
+        </dependency>
+
+        <dependency>
+            <groupId>shop.huanting</groupId>
+            <artifactId>common</artifactId>
+            <version>1.0</version>
+        </dependency>
 
         <dependency>
             <groupId>com.alibaba</groupId>

@@ -1,5 +1,7 @@
 package shop.huanting.server;
 
+import com.alibaba.fastjson.JSON;
+import entry.ModifyInfo;
 import io.netty.bootstrap.ServerBootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -31,11 +33,21 @@ public class ClientReceive implements InitializingBean, DisposableBean {
     private int port;
 
     public ClientReceive() {
-        log.info("开始启动 netty 服务");
+        log.info("开始启动 netty 服务, port");
     }
 
     private EventLoopGroup bossGroup;
     private EventLoopGroup workerGroup;
+
+    private ChannelHandlerContext ctx;
+
+    public synchronized void sendMsg(ModifyInfo msg) {
+        if (ctx == null || ctx.isRemoved()) {
+            return;
+        }
+        ctx.writeAndFlush(JSON.toJSONString(msg));
+    }
+
 
     @Override
     public void afterPropertiesSet() {
@@ -43,6 +55,8 @@ public class ClientReceive implements InitializingBean, DisposableBean {
         this.bossGroup = new NioEventLoopGroup();
         this.workerGroup = new NioEventLoopGroup();
         ServerBootstrap b = new ServerBootstrap();
+
+        ClientReceive clientReceive = this;
 
         b.group(bossGroup, workerGroup)
                 .channel(NioServerSocketChannel.class)
@@ -53,7 +67,7 @@ public class ClientReceive implements InitializingBean, DisposableBean {
                     protected void initChannel(SocketChannel ch) {
                         ch.pipeline().addLast(new StringDecoder(StandardCharsets.UTF_8));
                         ch.pipeline().addLast(new StringEncoder(StandardCharsets.UTF_8));
-                        ch.pipeline().addLast(new Handler());
+                        ch.pipeline().addLast(new SimpleHandler(clientReceive));
                     }
                 });
 
@@ -61,7 +75,7 @@ public class ClientReceive implements InitializingBean, DisposableBean {
             ChannelFuture f = b.bind(port).sync();
             //阻塞直到服务器关闭
 //            f.channel().closeFuture().sync();
-            log.info("Netty 启动成功");
+            log.info("Netty[{}] 启动成功", port);
         } catch (Exception e) {
             log.error("Netty 启动错误", e);
             workerGroup.shutdownGracefully();
@@ -71,7 +85,7 @@ public class ClientReceive implements InitializingBean, DisposableBean {
 
     @Override
     public void destroy() {
-        log.info("关闭 netty 服务");
+        log.info("关闭 netty[{}] 服务", port);
         if (bossGroup.isShutdown()) {
             return;
         }
@@ -79,15 +93,33 @@ public class ClientReceive implements InitializingBean, DisposableBean {
         bossGroup.shutdownGracefully();
     }
 
-    public static class Handler extends ChannelHandlerAdapter  {
+    private void reset(ChannelHandlerContext ctx) {
+        if (this.ctx != null && !this.ctx.isRemoved()) {
+            this.ctx.disconnect();
+        }
+        this.ctx = ctx;
+    }
+
+    public static class SimpleHandler extends ChannelHandlerAdapter {
+
+        private ClientReceive clientReceive;
+
+        public SimpleHandler(ClientReceive clientReceive) {
+            this.clientReceive = clientReceive;
+        }
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
             super.channelActive(ctx);
+
+            // 每次都放弃掉最旧的链接
+            clientReceive.reset(ctx);
+
             log.info("有客户端链接");
+            ModifyInfo modifyInfo = new ModifyInfo();
+            modifyInfo.setType("ping");
 
-
-            ChannelFuture future = ctx.writeAndFlush("ping。。。");
+            ChannelFuture future = ctx.writeAndFlush(JSON.toJSONString(modifyInfo));
             log.info("ping server ： done: {}, success: {}", future.isDone(), future.isSuccess());
         }
 
@@ -101,6 +133,7 @@ public class ClientReceive implements InitializingBean, DisposableBean {
             }else {
                 val = msg.toString();
             }
+            log.info("SimpleHandler hashCode : {}", this.hashCode());
             log.debug("收到客户端消息 : {}", val);
 
             // 传递给前端

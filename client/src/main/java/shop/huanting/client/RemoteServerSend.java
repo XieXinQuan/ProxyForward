@@ -1,6 +1,8 @@
 package shop.huanting.client;
 
 import com.alibaba.fastjson.JSON;
+import entry.ModifyInfo;
+import entry.SendData;
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
 import io.netty.buffer.Unpooled;
@@ -19,6 +21,7 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
 import reactor.netty.http.client.HttpClient;
 
+import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -35,6 +38,8 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
     private String serverHost;
     @Value("${custom.server.port}")
     private int serverPort;
+    @Resource
+    private ReceiveServer receiveServer;
 
 
     private ChannelHandlerContext ctx;
@@ -64,7 +69,9 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
 
         SendData sendData = new SendData("request", method, path, httpHeaders, body);
 
-        ctx.writeAndFlush(JSON.toJSONString(sendData));
+        try {
+            ctx.writeAndFlush(JSON.toJSONString(sendData)).sync();
+        } catch (InterruptedException e) { }
 
     }
 
@@ -121,15 +128,18 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
 
     @Override
     public void channelRead(ChannelHandlerContext ctx, Object msg) {
-        String val;
-        if (msg instanceof String) {
-            val = (String) msg;
-        } else if (msg instanceof ByteBuf) {
-            val = new String(Unpooled.copiedBuffer((ByteBuf) msg).array());
-        } else {
-            val = msg.toString();
-        }
+        String val = (String) msg;
         log.info("收到服务器消息：" + val);
+        ModifyInfo modifyInfo = JSON.parseObject(val, ModifyInfo.class);
+        if ("ping".equals(modifyInfo.getType())) {
+
+        }else if ("addRule".equals(modifyInfo.getType())) {
+
+            receiveServer.addRule(modifyInfo.getTargetPath(), modifyInfo);
+        }else if ("removeRule".equals(modifyInfo.getType())) {
+
+            receiveServer.removeRule(modifyInfo.getTargetPath());
+        }
     }
 
     @Override
