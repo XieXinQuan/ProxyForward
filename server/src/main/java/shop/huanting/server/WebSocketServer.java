@@ -9,9 +9,10 @@ import javax.websocket.*;
 import javax.websocket.server.PathParam;
 import javax.websocket.server.ServerEndpoint;
 import java.io.IOException;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.concurrent.TimeUnit;
 
 /**
  * @author xie.xinquan
@@ -72,35 +73,80 @@ public class WebSocketServer {
     }
 
     private static StringBuilder cacheTxt = new StringBuilder();
+    public static Map<String, SendData> pathDetailMap = new ConcurrentHashMap<>();
+
+    private static ReceiveMessageTask thread = new ReceiveMessageTask();
+
+    static {
+        thread.start();
+    }
+    private static class ReceiveMessageTask extends Thread {
+
+        private Queue<String> queue = new LinkedList<>();
+        @Override
+        public void run() {
+            while (true) {
+                while (!queue.isEmpty()) {
+                    WebSocketServer.sendMessage(queue.poll());
+                }
+                try {
+                    TimeUnit.MILLISECONDS.sleep(100);
+                }catch (InterruptedException e) {}
+            }
+        }
+    }
+
+    public static void sendMessageAsync(String txt) {
+        thread.queue.add(txt);
+    }
 
     public static void sendMessage(String txt) {
         try {
-            cacheTxt.append(txt);
-            // 一次发送完毕！！！
-            String value = "[" + cacheTxt.toString() + "]";
+            if (txt != null) {
+                cacheTxt.append(txt);
+            }
+
+            int length = 0;
+            int pos = 0;
+            while (pos < cacheTxt.length() && cacheTxt.charAt(pos) != '{') {
+                char c = cacheTxt.charAt(pos++);
+                length = length * 10 + (c - '0');
+            }
+
+            // 是否结束一轮
+            if (cacheTxt.length() == pos || cacheTxt.charAt(pos) != '{' || cacheTxt.length() - pos < length) {
+                return;
+            }
+
+            String value = cacheTxt.substring(pos, pos + length);
+
+
             log.info("开始格式化数据：" + value);
-            List<SendData> sendDataList = JSON.parseArray(value, SendData.class);
+            SendData sendData = JSON.parseObject(value, SendData.class);
             log.info("格式化成功");
 
-            for (SendData sendData : sendDataList) {
-                if ("ping".equals(sendData.getType())) {
+            if ("ping".equals(sendData.getType())) {
 
-                } else if ("request".equals(sendData.getType())) {
-                    for (WebSocketServer socketServer : webSocketSet) {
-                        socketServer.sendMessage(sendData.getMethod(), sendData.getPath());
-                    }
+            } else if ("request".equals(sendData.getType())) {
+                pathDetailMap.put(sendData.getPath(), sendData);
+                for (WebSocketServer socketServer : webSocketSet) {
+                    socketServer.sendMessage(sendData.getMethod(), sendData.getPath());
                 }
             }
 
-            // 重置
-            cacheTxt = new StringBuilder();
+
+            // 进入下次
+            if (cacheTxt.length() - pos > length) {
+                String substring = cacheTxt.substring(pos + length);
+                cacheTxt = new StringBuilder(substring);
+                // 触发读取
+                sendMessage(null);
+            }else {
+                cacheTxt = new StringBuilder();
+            }
 
         }catch (Exception e) {
-            // 存在拆包情况，与 下一次结合
-//            cacheTxt.append(txt);
-            log.error("格式化json错误, 等待下一次解析");
-            // 重置
-//            cacheTxt = new StringBuilder();
+            log.error("接收客户端信息处理异常", e);
         }
 
     }

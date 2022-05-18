@@ -33,7 +33,6 @@ public class ClientReceive implements InitializingBean, DisposableBean {
     private int port;
 
     public ClientReceive() {
-        log.info("开始启动 netty 服务, port");
     }
 
     private EventLoopGroup bossGroup;

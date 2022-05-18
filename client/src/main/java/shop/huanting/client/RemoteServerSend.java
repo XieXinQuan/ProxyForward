@@ -4,13 +4,9 @@ import com.alibaba.fastjson.JSON;
 import entry.ModifyInfo;
 import entry.SendData;
 import io.netty.bootstrap.Bootstrap;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.Unpooled;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.nio.NioSocketChannel;
-import io.netty.handler.codec.DelimiterBasedFrameDecoder;
-import io.netty.handler.codec.FixedLengthFrameDecoder;
 import io.netty.handler.codec.string.StringDecoder;
 import io.netty.handler.codec.string.StringEncoder;
 import lombok.extern.slf4j.Slf4j;
@@ -19,10 +15,13 @@ import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.stereotype.Component;
-import reactor.netty.http.client.HttpClient;
 
 import javax.annotation.Resource;
 import java.nio.charset.StandardCharsets;
+import java.util.LinkedList;
+import java.util.Queue;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
 /**
  * @author xie.xinquan
@@ -45,12 +44,45 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
     private ChannelHandlerContext ctx;
     private ChannelFuture future;
 
+
+
     private void againConnect() {
         if (ctx == null || ctx.isRemoved() || !ctx.channel().isActive()) {
             // 重连
             ctx = null;
             this.afterPropertiesSet();
         }
+    }
+
+    private SendTask sendTask = new SendTask();
+
+    private static class SendTask extends Thread {
+
+        private Lock lock = new ReentrantLock();
+        private RemoteServerSend remoteServerSend;
+
+        @Override
+        public void run() {
+            while (true) {
+                while (!sendData.isEmpty()) {
+                    SendData poll = sendData.poll();
+                    try {
+                        String str = JSON.toJSONString(poll);
+                        int length = str.length();
+                        remoteServerSend.ctx.writeAndFlush(String.valueOf(length)).sync();
+                        remoteServerSend.ctx.writeAndFlush(str).sync();
+                    }catch (InterruptedException e) {}
+                }
+                try {
+                    Thread.sleep(100);
+                }catch (InterruptedException e) {}
+            }
+        }
+
+        private Queue<SendData> sendData = new LinkedList<>();
+
+
+
     }
 
     /**
@@ -60,7 +92,7 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
      * @param httpHeaders
      * @param body
      */
-    public synchronized void sendDataToServer(String method, String path, HttpHeaders httpHeaders, String body) {
+    public void sendDataToServer(String method, String path, HttpHeaders httpHeaders, String body) {
         this.againConnect();
         if (ctx == null) {
             log.info("上报服务器错误，连接不上服务器");
@@ -68,10 +100,7 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
         }
 
         SendData sendData = new SendData("request", method, path, httpHeaders, body);
-
-        try {
-            ctx.writeAndFlush(JSON.toJSONString(sendData)).sync();
-        } catch (InterruptedException e) { }
+        sendTask.sendData.add(sendData);
 
     }
 
@@ -105,6 +134,11 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
         }catch (Exception e) {
             log.error("连接服务器错误：", e);
         }
+        log.info("启动后台发送线程");
+        if (!sendTask.isAlive()) {
+            sendTask.start();
+            sendTask.remoteServerSend = this;
+        }
     }
 
     @Override
@@ -120,6 +154,8 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
         log.info("连接服务器成功 : {}", ctx.channel().remoteAddress());
 
         String ping = JSON.toJSONString(new SendData("ping", null, null, null, null));
+        int length = ping.length();
+        ctx.writeAndFlush(String.valueOf(length));
         ChannelFuture future = ctx.writeAndFlush(ping);
         log.info("send ping server ： done: {}, success: {}", future.isDone(), future.isSuccess());
 

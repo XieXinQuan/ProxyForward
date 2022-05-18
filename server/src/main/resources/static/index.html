@@ -1,65 +1,162 @@
-<html>
-
+<!doctype html>
+    <html lang="zh-CN">
     <head>
-        <meta charset="UTF-8">
-    </head>
+        <meta charset="utf-8">
 
-    <body>
-        <h2>Welcome To HuanTing</h2><br>
-        <div id="pathAppendDiv" style="width: 1200px; height: 800px; overflow-y: scroll;">
+        <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+        <title>Welcome To Huanting</title>
 
-        </div>
-    </body>
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <link href="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/css/bootstrap.min.css" rel="stylesheet">
+        <script src="https://cdn.staticfile.org/twitter-bootstrap/5.1.1/js/bootstrap.bundle.min.js"></script>
+        <script src="https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js"></script>
 
-    <script>
-
-        var socket;
-
-        if(typeof(WebSocket) == "undefined") {
-            console.log("您的浏览器不支持WebSocket");
-        } else {
-            console.log("您的浏览器支持WebSocket");
-            //实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
-            socket = new WebSocket("ws://" + window.location.host + "/websocket/20");
-            //打开事件
-            socket.onopen = function() {
-                addContent("连接服务器成功", "");
-                // socket.send("这是来自客户端的消息" + location.href + new Date());
-            };
-            //获得消息事件
-            socket.onmessage = function(msg) {
-
-                console.log(msg.data)
-                let data = JSON.parse(msg.data);
-                addContent(data.method, data.path);
-
-                //发现消息进入    开始处理前端触发逻辑
-            };
-            //关闭事件
-            socket.onclose = function() {
-                console.log("Socket已关闭");
-            };
-            //发生了错误事件
-            socket.onerror = function() {
-                alert("Socket发生了错误");
-                //此时可以尝试刷新页面
+        <style>
+            html, body {
+                height: 100%;
+                padding: 0px;
+                margin: 0px;
             }
-            //离开页面时，关闭socket
-            //jquery1.8中已经被废弃，3.0中已经移除
-            // $(window).unload(function(){
-            //     socket.close();
-            //});
-        }
+            .mb-5 {
+                margin-bottom: 0.5em!important;
+            }
+        </style>
+    </head>
+    <body>
 
-        function addContent(method, path) {
-            let h2 = document.createElement("h3");
-            h2.innerText = method + " " + path;
-            h2.setAttribute("custom-path", path)
-            h2.addEventListener("click", ev => {
-                console.log(ev)
-                console.log(ev)
-            })
-            document.getElementById("pathAppendDiv").appendChild(h2);
-        }
-    </script>
+    <!-- Modal -->
+    <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="true" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="staticBackdropLabel">Modify Request Info</h5>
+                </div>
+                <div class="modal-body">
+                    ...
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary">Submit</button>
+                </div>
+            </div>
+        </div>
+    </div>
+        <div style="width: 100%; height: 100%">
+            <h2 style="text-align: center">Welcome To HuanTing</h2><br>
+
+            <div class="container" style="height: 90%">
+                <div class="row" style="height: 100%">
+                    <div class="col-md-4" style="height: 100%">
+                        <div id="pathAppendDiv" style="width: 100%; height: 100%; overflow-y: auto;">
+
+                        </div>
+                    </div>
+                    <div class="col-md-8" style="height: 100%">
+                        <div id="pathDetail" style="width: 100%; height: 100%; overflow-y: auto;">
+                            <div class="card" style="height: 100%">
+                                <div class="card-header">
+                                    please click left path
+                                </div>
+                                <div class="card-body">
+                                    <h5 class="card-title">Request Header</h5>
+                                    <br>
+                                    <p class="card-text">Request Body</p>
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                        Modify Rule
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script>
+
+            var socket;
+
+            if(typeof(WebSocket) == "undefined") {
+                alert("您的浏览器不支持WebSocket");
+            } else {
+                //实现化WebSocket对象，指定要连接的服务器地址与端口  建立连接
+                socket = new WebSocket("ws://" + window.location.host + "/websocket/20");
+                //打开事件
+                socket.onopen = function() {
+                    addContent("连接服务器成功", "");
+                    addContent("test", "/")
+                };
+                //获得消息事件
+                socket.onmessage = function(msg) {
+                    console.log(msg.data)
+                    let data = JSON.parse(msg.data);
+                    addContent(data.method, data.path);
+                    //发现消息进入    开始处理前端触发逻辑
+                };
+                //关闭事件
+                socket.onclose = function() {
+                    console.log("Socket已关闭");
+                };
+                //发生了错误事件
+                socket.onerror = function() {
+                    alert("Socket发生了错误");
+                    //此时可以尝试刷新页面
+                }
+            }
+
+            function addContent(method, path) {
+                let div = $("<div class='shadow-sm p-3 mb-5 bg-body rounded'> " + method + " " + path + "</div>")
+                $(div).on("click", {"path": path}, function (e) {
+                    var targetPath = e.data.path
+                    $.ajax({
+                        url: "/getPathDetail" , //请求路径
+                        type: "GET" , //请求方式
+                        data: {"path": targetPath},//请求参数
+                        dataType: "json",//设置接受到的响应数据的格式
+                        //回调函数
+                        success:function (data) {
+                            $("#pathDetail").empty()
+                            if (typeof (data) == 'undefined' || data == null || data.length === 0) {
+                                return
+                            }
+
+                            var div = '<div class = "card" ><div class = "card-header bg-success p-2 text-dark bg-opacity-50" >HTTP/1.1 ' + data.method + ' ' + data.path + ' ' +
+                                '</div><div class="card-body">';
+                            for (var key in data.httpHeaders) {
+                                div += '<div class="container bg-success p-2 text-dark bg-opacity-10"><div class="row"><div class="col-4">' + key + '</div><div class="col-8">' + data.httpHeaders[key] + '</div></div></div>'
+                                // div += '<div class="card-title bg-success p-2 text-dark bg-opacity-10">' + key + ': ' + data.httpHeaders[key] + '</div>'
+                            }
+                            div += '<br>';
+                            if (typeof (data.body) != 'undefined' && data.body !== '') {
+                                div += '<div class="card-text bg-success p-2 text-dark bg-opacity-10">' + data.body + '</div>';
+                            }
+                            div += '<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Modify Rule</button>'
+                            div += '</div></div>';
+                            $("#pathDetail").append($(div))
+                        },
+                        error:function () {
+                            console.log("出错啦...")
+                        }//表示如果请求响应出现错误，会执行的这个回调函数
+
+                    })
+
+                })
+
+
+                $(div).on("mouseover",function (e) {
+                    $(e.target).removeClass('shadow-sm')
+                    $(e.target).addClass('shadow-lg')
+                });
+                $(div).on("mouseout",function (e) {
+                    $(e.target).removeClass('shadow-lg')
+                    $(e.target).addClass('shadow-sm')
+                });
+
+                $("#pathAppendDiv").append(div)
+                var length = $('#pathAppendDiv').prop("scrollHeight")
+                $('#pathAppendDiv').animate({scrollTop : length}, 400);
+            }
+
+        </script>
+    </body>
 </html>

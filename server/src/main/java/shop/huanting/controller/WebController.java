@@ -1,11 +1,15 @@
 package shop.huanting.controller;
 
+import com.alibaba.fastjson.JSON;
 import entry.ModifyInfo;
+import entry.SendData;
+import org.springframework.http.HttpHeaders;
 import org.springframework.web.bind.annotation.*;
 import shop.huanting.server.ClientReceive;
 import shop.huanting.server.WebSocketServer;
 
 import javax.annotation.Resource;
+import java.util.Map;
 
 /**
  * @author xie.xinquan
@@ -37,5 +41,12 @@ public class WebController {
         modifyInfo.setTargetPath(path);
         clientReceive.sendMsg(modifyInfo);
         return "Success";
+    }
+
+    @GetMapping("/getPathDetail")
+    public SendData getPathDetail(@RequestParam("path") String path) {
+        Map<String, SendData> pathDetailMap = WebSocketServer.pathDetailMap;
+        SendData sendData = pathDetailMap.get(path);
+        return sendData;
     }
 }
