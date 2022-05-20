@@ -108,7 +108,7 @@ public class WebSocketServer {
 
             int length = 0;
             int pos = 0;
-            while (pos < cacheTxt.length() && cacheTxt.charAt(pos) != '{') {
+            while (pos < cacheTxt.length() && cacheTxt.charAt(pos) >= '0' && cacheTxt.charAt(pos) <= '9') {
                 char c = cacheTxt.charAt(pos++);
                 length = length * 10 + (c - '0');
             }
@@ -121,13 +121,14 @@ public class WebSocketServer {
             String value = cacheTxt.substring(pos, pos + length);
 
 
-            log.info("开始格式化数据：" + value);
+            log.debug("开始格式化数据：" + value);
             SendData sendData = JSON.parseObject(value, SendData.class);
-            log.info("格式化成功");
+            log.debug("格式化成功");
 
             if ("ping".equals(sendData.getType())) {
-
+                log.debug("client ping ...");
             } else if ("request".equals(sendData.getType())) {
+                log.debug("client receive request {}, will send to web page", sendData.getPath());
                 pathDetailMap.put(sendData.getPath(), sendData);
                 for (WebSocketServer socketServer : webSocketSet) {
                     socketServer.sendMessage(sendData.getMethod(), sendData.getPath());

@@ -66,6 +66,9 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
             while (true) {
                 while (!sendData.isEmpty()) {
                     SendData poll = sendData.poll();
+                    if (poll == null) {
+                        continue;
+                    }
                     try {
                         String str = JSON.toJSONString(poll);
                         int length = str.length();
@@ -106,7 +109,7 @@ public class RemoteServerSend extends ChannelInboundHandlerAdapter implements In
 
     @Override
     public void afterPropertiesSet() {
-        log.info("开始连接服务器:  {}:{}", serverHost, serverPort);
+        log.info("开始连接服务器: {} : {}", serverHost, serverPort);
         try {
 
             RemoteServerSend serverSend = this;

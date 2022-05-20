@@ -26,17 +26,66 @@
 
     <!-- Modal -->
     <div class="modal fade" id="staticBackdrop" data-bs-backdrop="static" data-bs-keyboard="true" tabindex="-1" aria-labelledby="staticBackdropLabel" aria-hidden="true">
-        <div class="modal-dialog modal-xl">
+        <div class="modal-dialog modal-xl modal-dialog-scrollable">
             <div class="modal-content">
                 <div class="modal-header">
                     <h5 class="modal-title" id="staticBackdropLabel">Modify Request Info</h5>
                 </div>
                 <div class="modal-body">
-                    ...
+                    <div class="container">
+                        <div class="row row-cols-auto">
+                            <div class="col"><a class="nav-link border" onclick="toggleShow(1)">Modify Request Header</a></div>
+                            <div class="col"><a class="nav-link border" onclick="toggleShow(2)">Modify Request Body</a></div>
+                        </div>
+                    </div>
+                    <div id="modifyRequestHeader" style="margin-top: 0.5em">
+
+                        <div class="container" id="modifyRequestHeaderContainer">
+                            <div class="row">
+                                <div class="col-11 bg-success p-2 text-dark bg-opacity-10">
+                                    <div class="mb-3">
+                                        <label for="exampleInputEmail1" class="form-label">Email address</label>
+                                        <input type="email" class="form-control" id="exampleInputEmail1">
+                                    </div>
+                                </div>
+                                <div class="col-1">
+                                    <button type="button" class="btn-close" aria-label="Close" style="margin-top: 2.5em;"></button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="container" id="modifyRequestHeaderContainer">
+
+                            <div class="row" style="margin-top: 0.8em">
+                                <div class="col-11 bg-success p-2 text-dark bg-opacity-10">
+                                    <div class="mb-3">
+                                        <div class="input-group mb-3" style="margin-top: 0.5em">
+                                            <input type="text" class="form-control" placeholder="Key" aria-label="Key">
+                                            <span class="input-group-text"> ：</span>
+                                            <input type="text" class="form-control" placeholder="Value" aria-label="Value">
+                                        </div>
+                                    </div>
+                                </div>
+                                <div class="col-1">
+                                    <button type="button" class="btn-close" aria-label="Close" style="margin-top: 1em;"></button>
+                                </div>
+                            </div>
+
+                            <div class="row justify-content-md-center">
+                                <div class="col col-lg-2">
+                                    <button type="button" class="btn btn-primary">Add Request Header</button>
+                                </div>
+                            </div>
+                        </div>
+
+
+                    </div>
+                    <div id="modifyRequestBody" style="margin-top: 0.5em; display: none;">
+                        <textarea class="form-control" id="modifyRequestBodyTextarea" rows="3"></textarea>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                    <button type="button" class="btn btn-primary">Submit</button>
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal" onclick="submitDataToServer()">Submit</button>
                 </div>
             </div>
         </div>
@@ -61,7 +110,7 @@
                                     <h5 class="card-title">Request Header</h5>
                                     <br>
                                     <p class="card-text">Request Body</p>
-                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                    <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop" onclick="loadRequestDataToDialog()">
                                         Modify Rule
                                     </button>
                                 </div>
@@ -75,6 +124,11 @@
         <script>
 
             var socket;
+
+            var pathdata;
+            var currpath;
+
+            var senddata = {}
 
             if(typeof(WebSocket) == "undefined") {
                 alert("您的浏览器不支持WebSocket");
@@ -124,15 +178,17 @@
                                 '</div><div class="card-body">';
                             for (var key in data.httpHeaders) {
                                 div += '<div class="container bg-success p-2 text-dark bg-opacity-10"><div class="row"><div class="col-4">' + key + '</div><div class="col-8">' + data.httpHeaders[key] + '</div></div></div>'
-                                // div += '<div class="card-title bg-success p-2 text-dark bg-opacity-10">' + key + ': ' + data.httpHeaders[key] + '</div>'
                             }
                             div += '<br>';
                             if (typeof (data.body) != 'undefined' && data.body !== '') {
                                 div += '<div class="card-text bg-success p-2 text-dark bg-opacity-10">' + data.body + '</div>';
                             }
-                            div += '<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop">Modify Rule</button>'
+                            div += '<button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#staticBackdrop" onclick="loadRequestDataToDialog()">Modify Rule</button>'
                             div += '</div></div>';
                             $("#pathDetail").append($(div))
+
+                            currpath = data.path;
+                            pathdata = data;
                         },
                         error:function () {
                             console.log("出错啦...")
@@ -155,6 +211,103 @@
                 $("#pathAppendDiv").append(div)
                 var length = $('#pathAppendDiv').prop("scrollHeight")
                 $('#pathAppendDiv').animate({scrollTop : length}, 400);
+            }
+
+            function toggleShow(type) {
+                if (type === 1) {
+                    $("#modifyRequestHeader").show();
+                    $("#modifyRequestBody").hide();
+                }else {
+                    $("#modifyRequestBody").show();
+                    $("#modifyRequestHeader").hide();
+                }
+            }
+
+            function loadRequestDataToDialog() {
+
+                if (typeof (currpath) == 'undefined' || currpath == null || currpath.length === 0) {
+                    return
+                }
+                $("#modifyRequestHeaderContainer").empty();
+                for (var key in pathdata.httpHeaders) {
+                    var id = 'custid' + key
+                    var idrow = (id + 'row').replace("-", "")
+
+                    var div = '<div class="row" style="margin-top: 0.8em;" id="' + idrow + '"><div class="col-11 bg-success p-2 text-dark bg-opacity-10"><div class="mb-3">';
+                    div += '<label htmlFor="' + id + '" class="form-label">' + key + '</label>';
+                    div += '<input type="email" class="form-control" id="' + id + '"></div></div><div class="col-1"><button type="button" class="btn-close" aria-label="Close" style="margin-top: 2.5em;" onclick="deleteRequestHeader(\'' + idrow + '\', \'' + key + '\')"></button></div></div>';
+                    $("#modifyRequestHeaderContainer").append($(div))
+                }
+                for (var key in pathdata.httpHeaders) {
+                    var id = 'custid' + key
+                    $("#" + id).val(pathdata.httpHeaders[key])
+                }
+
+                var addRequestHeaderButton = '<div class="row justify-content-md-center" style="margin-top: 0.8em"><div class="col col-lg-2"><button type="button" class="btn btn-primary" onclick="addRequestHeader()">Primary</button></div></div>'
+                $("#modifyRequestHeaderContainer").append($(addRequestHeaderButton))
+
+                $("#modifyRequestBody").empty();
+
+                if (typeof (pathdata.body) != 'undefined' && pathdata.body !== '') {
+                    $("#modifyRequestBody").append($('<textarea class="form-control" id="modifyRequestBodyTextarea" rows="20">' + pathdata.body + '</textarea>'))
+                }else {
+                    $("#modifyRequestBody").append($('<textarea class="form-control" id="modifyRequestBodyTextarea" placeholder="Request Body Is Empty" rows="20"></textarea>'))
+                }
+
+                // 清空数据
+                senddata = {}
+            }
+
+            var addnum = 0
+            function addRequestHeader() {
+                // addnum ++
+                // var id = 'addcustid' + addnum
+                // var idrow = id + 'row'
+                // var div = '<div class="row" style="margin-top: 0.8em;" id="' + idrow + '"><div class="col-11 bg-success p-2 text-dark bg-opacity-10"><div class="mb-3">';
+                // div += '<label htmlFor="' + id + '" class="form-label">' + key + '</label>';
+                // div += '<input type="email" class="form-control" id="' + id + '"></div></div><div class="col-1"><button type="button" class="btn-close" aria-label="Close" style="margin-top: 2.5em;" onclick="deleteRequestHeader(\'' + idrow + '\', \'' + key + '\')"></button></div></div>';
+                // $("#modifyRequestHeaderContainer").append($(div))
+            }
+
+            function deleteRequestHeader(id, header) {
+                $('#' + id).remove()
+                if (typeof (senddata['deleteHeader']) == 'undefined' || senddata['deleteHeader'] == null) {
+                    senddata['deleteHeader'] = []
+                }
+                senddata['deleteHeader'].push(header)
+
+            }
+
+            function submitDataToServer() {
+                // 遍历数据
+                for (var key in pathdata.httpHeaders) {
+                    var id = 'custid' + key
+
+                    var value = $("#" + id).val()
+                    if (typeof (value) != 'undefined' && value != null) {
+                        var origin = pathdata.httpHeaders[key]
+                        if (value != origin) {
+                            console.log("modify header : " + key + ': ' + value)
+                        }
+                    }
+                }
+                if (typeof (senddata) != 'undefined' && typeof (senddata.deleteHeader) != 'undefined' && senddata.deleteHeader != null) {
+                    for (var key in senddata.deleteHeader) {
+                        console.log("delete header : " + senddata.deleteHeader[key])
+                    }
+                }
+                var requestBodyContent = $("#modifyRequestBodyTextarea").val()
+                var originRequestBodyContent = pathdata.body
+                if (typeof (requestBodyContent) != 'undefined' && requestBodyContent != null) {
+                    if (typeof (originRequestBodyContent) != 'undefined' && originRequestBodyContent != null && originRequestBodyContent == requestBodyContent) {
+                        // 不用修改
+                    }else if ((typeof (originRequestBodyContent) == 'undefined' || originRequestBodyContent == null) && requestBodyContent.length == 0){
+
+                    }else {
+                        console.log("modify body : " + requestBodyContent)
+                    }
+                }
+
             }
 
         </script>

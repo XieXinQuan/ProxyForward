@@ -24,9 +24,7 @@ public class GatewayConfig  {
 
         return builder.routes()
                 .route("h", r -> r.host("*")
-                        .filters(gatewayFilterSpec -> gatewayFilterSpec.modifyRequestBody(String.class, String.class, (serverWebExchange, s) -> {
-                            return Mono.just(modifyRequestBodyFilter.modifyRequest(serverWebExchange, s));
-                        }))
+                        .filters(gatewayFilterSpec -> gatewayFilterSpec.modifyRequestBody(byte[].class, byte[].class, (serverWebExchange, arr) -> Mono.just(modifyRequestBodyFilter.modifyRequest(serverWebExchange, arr))))
                 .uri("http://192.168.10.228:8092"))
                 // 自定义处理类
                 .build();

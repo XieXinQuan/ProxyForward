@@ -132,7 +132,6 @@ public class ClientReceive implements InitializingBean, DisposableBean {
             }else {
                 val = msg.toString();
             }
-            log.info("SimpleHandler hashCode : {}", this.hashCode());
             log.debug("收到客户端消息 : {}", val);
 
             // 传递给前端
