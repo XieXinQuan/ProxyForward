@@ -31,7 +31,7 @@
                 <div class="modal-header">
                     <h5 class="modal-title" id="staticBackdropLabel">Modify Request Info</h5>
                 </div>
-                <div class="modal-body">
+                <div class="modal-body" id="modiftModalDialogScrollable">
                     <div class="container">
                         <div class="row row-cols-auto">
                             <div class="col"><a class="nav-link border" onclick="toggleShow(1)">Modify Request Header</a></div>
@@ -40,19 +40,6 @@
                     </div>
                     <div id="modifyRequestHeader" style="margin-top: 0.5em">
 
-                        <div class="container" id="modifyRequestHeaderContainer">
-                            <div class="row">
-                                <div class="col-11 bg-success p-2 text-dark bg-opacity-10">
-                                    <div class="mb-3">
-                                        <label for="exampleInputEmail1" class="form-label">Email address</label>
-                                        <input type="email" class="form-control" id="exampleInputEmail1">
-                                    </div>
-                                </div>
-                                <div class="col-1">
-                                    <button type="button" class="btn-close" aria-label="Close" style="margin-top: 2.5em;"></button>
-                                </div>
-                            </div>
-                        </div>
                         <div class="container" id="modifyRequestHeaderContainer">
 
                             <div class="row" style="margin-top: 0.8em">
@@ -69,15 +56,10 @@
                                     <button type="button" class="btn-close" aria-label="Close" style="margin-top: 1em;"></button>
                                 </div>
                             </div>
-
-                            <div class="row justify-content-md-center">
-                                <div class="col col-lg-2">
-                                    <button type="button" class="btn btn-primary">Add Request Header</button>
-                                </div>
-                            </div>
                         </div>
-
-
+                        <div class="d-grid gap-2" style="margin-top: 0.8em">
+                            <button type="button" class="btn btn-primary" onclick="addRequestHeader()">Add Request Header</button>
+                        </div>
                     </div>
                     <div id="modifyRequestBody" style="margin-top: 0.5em; display: none;">
                         <textarea class="form-control" id="modifyRequestBodyTextarea" rows="3"></textarea>
@@ -120,7 +102,18 @@
                 </div>
             </div>
         </div>
+    <div class="position-fixed bottom-0 end-0 p-3" style="z-index: 11">
+        <div id="liveToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+            <div class="toast-header">
+                <strong class="me-auto">Huan Ting</strong>
+                <small>now</small>
+                <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+            </div>
+            <div class="toast-body" id="toastBody">
 
+            </div>
+        </div>
+    </div>
         <script>
 
             var socket;
@@ -243,9 +236,6 @@
                     $("#" + id).val(pathdata.httpHeaders[key])
                 }
 
-                var addRequestHeaderButton = '<div class="row justify-content-md-center" style="margin-top: 0.8em"><div class="col col-lg-2"><button type="button" class="btn btn-primary" onclick="addRequestHeader()">Primary</button></div></div>'
-                $("#modifyRequestHeaderContainer").append($(addRequestHeaderButton))
-
                 $("#modifyRequestBody").empty();
 
                 if (typeof (pathdata.body) != 'undefined' && pathdata.body !== '') {
@@ -256,17 +246,34 @@
 
                 // 清空数据
                 senddata = {}
+                addnum = 0
             }
 
             var addnum = 0
             function addRequestHeader() {
-                // addnum ++
-                // var id = 'addcustid' + addnum
-                // var idrow = id + 'row'
-                // var div = '<div class="row" style="margin-top: 0.8em;" id="' + idrow + '"><div class="col-11 bg-success p-2 text-dark bg-opacity-10"><div class="mb-3">';
-                // div += '<label htmlFor="' + id + '" class="form-label">' + key + '</label>';
-                // div += '<input type="email" class="form-control" id="' + id + '"></div></div><div class="col-1"><button type="button" class="btn-close" aria-label="Close" style="margin-top: 2.5em;" onclick="deleteRequestHeader(\'' + idrow + '\', \'' + key + '\')"></button></div></div>';
-                // $("#modifyRequestHeaderContainer").append($(div))
+                var id = 'addcustid' + addnum
+                addnum ++
+                var idrow = id + 'row'
+                var idkey = id + 'key'
+                var idvalue = id + 'value'
+                var div = '                            <div class="row" style="margin-top: 0.8em" id="' + idrow + '">\n' +
+                    '                                <div class="col-11 bg-success p-2 text-dark bg-opacity-10">\n' +
+                    '                                    <div class="mb-3">\n' +
+                    '                                        <div class="input-group mb-3" style="margin-top: 0.5em">\n' +
+                    '                                            <input type="text" class="form-control" placeholder="Key" aria-label="Key" id="' + idkey +'">\n' +
+                    '                                            <span class="input-group-text"> ：</span>\n' +
+                    '                                            <input type="text" class="form-control" placeholder="Value" aria-label="Value" id="' + idvalue + '">\n' +
+                    '                                        </div>\n' +
+                    '                                    </div>\n' +
+                    '                                </div>\n' +
+                    '                                <div class="col-1">\n' +
+                    '                                    <button type="button" class="btn-close" aria-label="Close" style="margin-top: 1em;" onclick="deleteRequestHeader(\'' + idrow + '\', \'' + idkey + '\')"></button>\n' +
+                    '                                </div>\n' +
+                    '                            </div>'
+                $("#modifyRequestHeaderContainer").append($(div))
+
+                var length = $('#modiftModalDialogScrollable').prop("scrollHeight")
+                $('#modiftModalDialogScrollable').animate({scrollTop : length}, 1000);
             }
 
             function deleteRequestHeader(id, header) {
@@ -279,6 +286,14 @@
             }
 
             function submitDataToServer() {
+
+                // 请求后端数据
+                var requestdata = {}
+                requestdata.targetPath = currpath
+                requestdata['modifyHeaders'] = []
+                requestdata['addHeaders'] = []
+                requestdata['deleteHeaders'] = []
+
                 // 遍历数据
                 for (var key in pathdata.httpHeaders) {
                     var id = 'custid' + key
@@ -288,12 +303,18 @@
                         var origin = pathdata.httpHeaders[key]
                         if (value != origin) {
                             console.log("modify header : " + key + ': ' + value)
+
+                            requestdata['modifyHeaders'].push({"header": key, "value": value})
                         }
                     }
                 }
                 if (typeof (senddata) != 'undefined' && typeof (senddata.deleteHeader) != 'undefined' && senddata.deleteHeader != null) {
+                    var p = /addcustid\d+key/
                     for (var key in senddata.deleteHeader) {
-                        console.log("delete header : " + senddata.deleteHeader[key])
+                        if (!p.test(senddata.deleteHeader[key])) {
+                            console.log("delete header : " + senddata.deleteHeader[key])
+                            requestdata['deleteHeaders'].push({"header": senddata.deleteHeader[key]})
+                        }
                     }
                 }
                 var requestBodyContent = $("#modifyRequestBodyTextarea").val()
@@ -305,9 +326,61 @@
 
                     }else {
                         console.log("modify body : " + requestBodyContent)
+                        requestdata['modifyRequestBody'] = {"value": requestBodyContent}
                     }
                 }
+                // 新增的
+                for (var i = 0; i < addnum; i++) {
+                    var idkey = 'addcustid' + i + 'key'
+                    var idvalue = 'addcustid' + i + 'value'
+                    // key value 和 deleteHeader
+                    var isdel = false
+                    for (var key in senddata.deleteHeader) {
+                        if (key == idkey) {
+                            isdel = true
+                        }
+                    }
+                    if (isdel || isEmpty($("#" + idkey).val()) || isEmpty($("#" + idvalue).val())) {
+                        continue
+                    }
 
+                    console.log($("#" + idkey).val() + ", " + $("#" + idvalue).val())
+
+                    requestdata['addHeaders'].push({"header": $("#" + idkey).val(), "value": $("#" + idvalue).val()})
+                }
+
+                console.log("commit request data")
+                console.log(requestdata)
+
+
+                $.ajax({
+                    url: "/addRule" , //请求路径
+                    type: "POST" , //请求方式
+                    contentType: 'application/json;charset=utf-8',
+                    data: JSON.stringify(requestdata), //请求参数
+                    dataType: "json",//设置接受到的响应数据的格式
+
+                    //回调函数
+                    success:function (resdata) {
+                        var res = JSON.parse(resdata)
+                        console.log("commit to server : " + res.status)
+                        $("#toastBody").text("commit to server : " + res.status)
+                        var toast = new bootstrap.Toast($("#liveToast"))
+
+                        toast.show()
+                    },
+                    error:function () {
+                        console.log("出错啦...")
+                    }//表示如果请求响应出现错误，会执行的这个回调函数
+
+                })
+
+            }
+
+            function isEmpty(obj) {
+                if (typeof (obj) == 'undefined' || obj == null || obj.length == 0) {
+                    return true
+                }
             }
 
         </script>

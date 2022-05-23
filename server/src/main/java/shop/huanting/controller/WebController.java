@@ -1,6 +1,7 @@
 package shop.huanting.controller;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
 import entry.ModifyInfo;
 import entry.SendData;
 import org.springframework.http.HttpHeaders;
@@ -31,7 +32,9 @@ public class WebController {
     public String addRule(@RequestBody ModifyInfo modifyInfo) {
         modifyInfo.setType("addRule");
         clientReceive.sendMsg(modifyInfo);
-        return "Success";
+        JSONObject jsonObject = new JSONObject();
+        jsonObject.put("status", "Success");
+        return jsonObject.toString();
     }
 
     @PostMapping("/removeRule")
